@@ -1,5 +1,6 @@
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
+from sklearn.model_selection import KFold
 
 import datasetReader
 import randomized_greedy
@@ -11,12 +12,21 @@ import matplotlib.pyplot as plt
 
 def experiment(dataset_name, scoring_function, feature_selector):
     dataset = datasetReader.read(dataset_name)
-    data = Data.build(dataset[0], dataset[1], False, dataset_name)
-    model = svm.SVC(kernel='rbf', gamma='auto')
-    print(data.train.x.shape[1])
-    num_features = int(data.train.x.shape[1])
-    accuracy, errors = build_accuracy_graph(model, data, num_features, 100, scoring_function, feature_selector)
-    return accuracy, errors
+    num_experiments = 5
+
+    max_cardinality = int(dataset[0].shape[1])
+    accuracy = np.zeros((num_experiments, max_cardinality))
+    kf = KFold(n_splits=num_experiments, shuffle=True)
+    i = 0
+    for train_index, test_index in kf.split(dataset[0]):
+        data = Data(Samples(dataset[0][train_index], dataset[1][train_index]),
+                    Samples(dataset[0][test_index], dataset[1][test_index]),
+                    False,
+                    dataset_name)
+        model = svm.SVC(kernel='rbf', gamma='auto')
+        accuracy[i] = build_accuracy_graph(model, data, max_cardinality, num_experiments, scoring_function, feature_selector)
+        i = i + 1
+    return np.average(accuracy, axis=0), np.std(accuracy, axis=0) #TODO change this!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 if __name__ == '__main__':
    rand_greedy, rand_greedy_errors = experiment("glass", scoring_functions.wrapper, randomized_greedy.get_features)

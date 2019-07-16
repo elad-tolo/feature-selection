@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn import svm
 from sklearn.feature_selection import mutual_info_regression
 
 import utils
@@ -6,6 +7,7 @@ import utils
 
 def wrapper(args):
     model, selected_features, candidate, data = args
+    model = svm.SVC(kernel='rbf', gamma='auto')
     features = selected_features + [candidate]
     return utils.model_accuracy(model, features, data)
 
