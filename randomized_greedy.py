@@ -6,7 +6,7 @@ from utils import model_accuracy
 
 
 def get_features(model, train_test_data, train_validation_data, max_cardinality, score_function):
-    repetitions = 10
+    repetitions = 5
     max_score = 0
     max_features = []
 

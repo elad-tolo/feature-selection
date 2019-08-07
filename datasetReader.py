@@ -1,11 +1,15 @@
+import networkx as nx
 import numpy as np
 import csv
 from numpy import genfromtxt
 from sklearn.model_selection import train_test_split
-
+from scipy.io import loadmat
+from pyitlib import discrete_random_variable as drv
 
 # Format = "one-file", "train-test", "features-label", "train-test-label"
 from sklearn import svm
+from sklearn.preprocessing import normalize
+import time
 
 
 def read(datasetName, shouldNormalize=False):
@@ -13,6 +17,17 @@ def read(datasetName, shouldNormalize=False):
         data = genfromtxt('data/glass/glass.data', delimiter=',')
         x = data[:, :-1]
         y = data[:, -1]
+        return x, y
+    if datasetName == "yale":
+        data = loadmat("data/yale/Yale_32x32.mat")
+        x = data['fea']
+        x = normalize(x)
+        y = data['gnd'].ravel()
+        return x, y
+    if datasetName == "PCMAC" or datasetName == 'lung':
+        data = loadmat("data/"+datasetName+"/"+datasetName+".mat")
+        x = data['X']
+        y = data['Y'].ravel()
         return x, y
     if datasetName == 'SPECT' or \
             datasetName == 'Sonar' or \
@@ -105,7 +120,35 @@ def getGlassData():
 
 
 if __name__ == '__main__':
-    x, y = getGlassData()
+    x, y = read("lung")
+    num_features = x.shape[1]
+    # num_features = 100
+    G = nx.Graph()
+    f = np.zeros((num_features, num_features))
+    for i in range(num_features):
+        start = time.time()
+        for j in range(num_features):
+            f[i, j] = drv.information_mutual_conditional(x[:, i], y, x[:, j]) + drv.information_mutual_conditional(x[:, j], y, x[:, i])
+            G.add_edge(i, j, weight=f[i, j])
+        end = time.time()
+        print(end-start)
+
+    apsp = nx.floyd_warshall(G)
+    alpha = 1
+    for i in range(num_features):
+        for j in range(num_features):
+            if f[i,j] == 0 or i == j:
+                continue
+            alpha = min(alpha, apsp[i][j] / f[i, j])
+            if alpha == 0:
+                print("ASD")
+    print(alpha)
+
+
+
+
+
+
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.2)
     rbf_svc = svm.SVC(kernel='rbf')
     rbf_svc.fit(x_train, y_train)
